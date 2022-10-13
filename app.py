@@ -1,6 +1,9 @@
 from models import (Base, session, engine, Product)
+
 import sqlalchemy
+
 import datetime
+
 import csv
 
 
@@ -9,9 +12,6 @@ def add_csv(filename):
 	with open(filename) as csvfile:
 		inventory = csv.reader(csvfile)
 		next(csvfile)
-		#csv_product_list = []
-		#csv_name_list = []
-		db_name_list = []
 		for item in inventory:
 			product = session.query(Product).filter(Product.product_name == item[0]).one_or_none()
 			csv_product_name = item[0]
@@ -119,9 +119,13 @@ def add_new_product():
 						session.commit()
 						print("item added")
 					else:
-						print(f"{item.product_name}, {item.product_quantity}, {item.product_price}, updated on: {item.date_updated} is on file and has a has a more up to date!!")
-
-			
+						print(f"{item.product_name}, {item.product_quantity}, {item.product_price}, updated on: {item.date_updated} is on file and is more up to date!!")
+						update_anyways = input("Do you want to update this product with a older date?(y/n) ").lower()
+						if update_anyways == 'y':
+							session.add(new_product)
+							session.delete(item)
+							session.commit()
+							print("item added")
 		another_product = input("Do you want to add another product? (y/n) ").lower()
 		if another_product == 'y':
 			continue
@@ -144,13 +148,8 @@ def backup():
 
 if __name__ == "__main__":
 	Base.metadata.create_all(engine)
-	#o = session.query(Product).filter(Product.product_id=='26').one()
-	#session.delete(o)
-	#session.commit()
-	
 	#for i in session.query(Product):
 		#session.delete(i)
 		#session.commit()
 	add_csv('inventory.csv')
-	
 	menu()
