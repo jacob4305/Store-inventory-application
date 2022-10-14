@@ -13,26 +13,27 @@ def add_csv(filename):
 		inventory = csv.reader(csvfile)
 		next(csvfile)
 		for item in inventory:
-			product = session.query(Product).filter(Product.product_name == item[0]).one_or_none()
+			db_product = session.query(Product).filter(Product.product_name == item[0]).one_or_none()
 			csv_product_name = item[0]
 			product_price = clean_price(item[1])
 			product_quantity = clean_quantity(item[2])
 			product_date_updated = clean_date(item[3])
 			update_inventory = Product(product_name=csv_product_name, product_quantity=product_quantity, product_price=product_price, date_updated=product_date_updated)
-			if product == None:	
+			if db_product == None:	
 				session.add(update_inventory)
 			else:
-				if product.date_updated < update_inventory.date_updated:
+				db_product_date_updated = datetime.datetime.strptime(str(db_product.date_updated), '%Y-%m-%d')
+				if db_product_date_updated < update_inventory.date_updated:
 					session.add(update_inventory)
-					session.delete(product)
-				if product.date_updated > update_inventory.date_updated:
+					session.delete(db_product)
+				if db_product_date_updated > update_inventory.date_updated:
 					pass
 		session.commit()
 			
 
-def clean_price(price_string):
+def clean_price(price_string):##
 	"""cleans string for easy use"""
-	return float(price_string.split('$')[1]) * 100
+	return int(float(price_string.split('$')[1]) * 100)
 
 
 def clean_quantity(quantity_string):
@@ -46,7 +47,7 @@ def clean_date(date_string):
 	month = int(split_date[0])
 	day = int(split_date[1])
 	year = int(split_date[2])
-	date = datetime.date(year, month, day)
+	date = datetime.datetime(year=year, month=month, day=day)
 	return date 
 
 
@@ -90,49 +91,69 @@ def add_new_product():
 	"""allows user to add new products to the database"""
 	while True:
 		new_name = input("Enter the new products name: ")
+		break
+	while True:
 		try:
 			new_price = input("Enter the new products price: ")
 			new_price = clean_price('$' + str(new_price))
 		except ValueError:
 			print("Please enter a number!")
 			continue
+		else:
+			break
+	while True:
 		try:
 			new_quantity = input("Enter the new products quantity: ")
 			new_quantity = clean_quantity(new_quantity)
 		except ValueError:
 			print("Please enter a number")
 			continue
+		else:
+			break
+	while True:
 		try:
 			new_date_updated = input("Enter the date updated (month/day/four digit year): ")
 			new_date_updated = clean_date(new_date_updated)
 		except (ValueError, IndexError):
 			print("Please enter a date in the format (12/22/1998): ")
 			continue
-		add_product = input(f"Add Name: {new_name} Price: {new_price/100} Quantity: {new_quantity} Date: {new_date_updated} to the database (y/n)? ").lower()
-		if add_product == 'y':
-			new_product = Product(product_name=new_name, product_price=new_price, product_quantity=new_quantity, date_updated=new_date_updated)
-			for item in session.query(Product):
-				if new_product.product_name == item.product_name:
-					if new_product.date_updated > item.date_updated:
-						session.add(new_product)
-						session.delete(item)
-						session.commit()
-						print("item added")
-					else:
-						print(f"{item.product_name}, {item.product_quantity}, {item.product_price}, updated on: {item.date_updated} is on file and is more up to date!!")
-						update_anyways = input("Do you want to update this product with a older date?(y/n) ").lower()
-						if update_anyways == 'y':
-							session.add(new_product)
-							session.delete(item)
-							session.commit()
-							print("item added")
-		another_product = input("Do you want to add another product? (y/n) ").lower()
-		if another_product == 'y':
-			continue
-		if another_product == 'n':
-			break
 		else:
-			continue
+			break
+	add_product = input(f"Add Name: {new_name} Price: {new_price/100} Quantity: {new_quantity} Date: {new_date_updated} to the database (y/n)? ").lower()
+	if add_product == 'y':
+		new_product = Product(product_name=new_name, product_price=new_price, product_quantity=new_quantity, date_updated=new_date_updated)
+		one_or_none = session.query(Product).filter(Product.product_name==new_name).one_or_none()
+		if one_or_none == None:
+			session.add(new_product)
+			session.commit()
+		if one_or_none != None:
+			one_or_none_datetime = datetime.datetime.strptime(str(one_or_none.date_updated), '%Y-%m-%d')
+			if new_date_updated > one_or_none_datetime:
+				one_or_none.product_name = new_name
+				one_or_none.product_price = new_price
+				one_or_none.product_quantity = new_quantity
+				one_or_none.date_updated = new_date_updated
+				session.commit()
+				print("product added!")
+			else:
+				while True:
+					add = input("A product updated on {} is on file, replace it?(y/n) ".format(one_or_none.date_updated)).lower()
+					if add == 'y':
+						one_or_none.product_name = new_name
+						one_or_none.product_price = new_price
+						one_or_none.product_quantity = new_quantity
+						one_or_none.date_updated = new_date_updated
+						session.commit()
+						print("product added!")
+						break
+					if add =='n':
+						break
+					else:
+						print("please enter y or n")
+						continue
+	another_product = input("Do you want to add another product? (y/n) ").lower()
+	if another_product == 'y':
+		add_new_product()			
 
 
 def backup():
@@ -142,14 +163,11 @@ def backup():
 		writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 		writer.writeheader()
 		for item in session.query(Product):
-			writer.writerow({'product_name': item.product_name, 'product_price': '$'+(str(item.product_price/100)), 'product_quantity': item.product_quantity, 'date_updated': item.date_updated.strftime('%-m/%-d/%Y')})
+			writer.writerow({'product_name': item.product_name, 'product_price': '$'+(str(item.product_price/100)), 'product_quantity': item.product_quantity, 'date_updated': item.date_updated})
 		print("File has been backed up!!!")
 
 
 if __name__ == "__main__":
 	Base.metadata.create_all(engine)
-	#for i in session.query(Product):
-		#session.delete(i)
-		#session.commit()
 	add_csv('inventory.csv')
 	menu()
