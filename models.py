@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -14,7 +14,6 @@ class Product(Base):
 	product_name = Column(String)
 	product_quantity = Column(Integer)
 	product_price = Column(Integer)
-	date_updated = Column(Date)
+	date_updated = Column(DateTime)
 
-if __name__ == "__main__":
-	Base.metadata.create_all(engine)
+

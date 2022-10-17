@@ -2,7 +2,7 @@ from models import (Base, session, engine, Product)
 
 import sqlalchemy
 
-import datetime
+from datetime import datetime
 
 import csv
 
@@ -19,17 +19,16 @@ def add_csv(filename):
 			product_quantity = clean_quantity(item[2])
 			product_date_updated = clean_date(item[3])
 			update_inventory = Product(product_name=csv_product_name, product_quantity=product_quantity, product_price=product_price, date_updated=product_date_updated)
-			if db_product == None:	
+			if db_product == None:
 				session.add(update_inventory)
 			else:
-				db_product_date_updated = datetime.datetime.strptime(str(db_product.date_updated), '%Y-%m-%d')
-				if db_product_date_updated < update_inventory.date_updated:
+				if db_product.date_updated < update_inventory.date_updated:
 					session.add(update_inventory)
 					session.delete(db_product)
-				if db_product_date_updated > update_inventory.date_updated:
+				if db_product.date_updated > update_inventory.date_updated:
 					pass
 		session.commit()
-			
+
 
 def clean_price(price_string):##
 	"""cleans string for easy use"""
@@ -47,7 +46,7 @@ def clean_date(date_string):
 	month = int(split_date[0])
 	day = int(split_date[1])
 	year = int(split_date[2])
-	date = datetime.datetime(year=year, month=month, day=day)
+	date = datetime(year=year, month=month, day=day)
 	return date 
 
 
@@ -127,8 +126,7 @@ def add_new_product():
 			session.add(new_product)
 			session.commit()
 		if one_or_none != None:
-			one_or_none_datetime = datetime.datetime.strptime(str(one_or_none.date_updated), '%Y-%m-%d')
-			if new_date_updated > one_or_none_datetime:
+			if new_date_updated > one_or_none.date_updated:
 				one_or_none.product_name = new_name
 				one_or_none.product_price = new_price
 				one_or_none.product_quantity = new_quantity
@@ -163,7 +161,7 @@ def backup():
 		writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 		writer.writeheader()
 		for item in session.query(Product):
-			writer.writerow({'product_name': item.product_name, 'product_price': '$'+(str(item.product_price/100)), 'product_quantity': item.product_quantity, 'date_updated': item.date_updated})
+			writer.writerow({'product_name': item.product_name, 'product_price': '$'+(str(item.product_price/100)), 'product_quantity': item.product_quantity, 'date_updated': datetime.strftime(item.date_updated, '%-m/%-d/%Y')})
 		print("File has been backed up!!!")
 
 
